@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController; // ✅ aliased to avoid conflict
 use App\Http\Controllers\StudentController; // public-facing student search
+use App\Http\Controllers\StudentSearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,9 +25,9 @@ use App\Http\Controllers\StudentController; // public-facing student search
 */
 
 // Homepage or search page for students (no login required)
-Route::get('/', [StudentController::class, 'index'])->name('students.search');
-Route::get('/student/{name}', [StudentController::class, 'show'])->name('students.show');
-
+Route::get('/', [StudentSearchController::class, 'index'])->name('search.index');
+Route::get('/search-students', [StudentSearchController::class, 'search'])->name('search.autocomplete');
+Route::get('/student/{id}', [StudentSearchController::class, 'show'])->name('search.show');
 
 /*
 |--------------------------------------------------------------------------
