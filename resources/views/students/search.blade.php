@@ -3,93 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Graduation Status</title>
+    <title>Student Graduation Status Checker</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     @vite('resources/css/app.css')
-    <script src="https://unpkg.com/alpinejs" defer></script>
 </head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
 
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white shadow-lg rounded-2xl p-8">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
+            Student Graduation Status Checker
+        </h1>
 
-    <div class="w-full max-w-lg text-center" x-data="studentSearch()">
-        <h1 class="text-2xl font-semibold text-gray-800 mb-6">Check Your Graduation Status</h1>
-
-        <!-- Search -->
+        <!-- Search Field -->
         <div class="relative">
-            <input type="text" x-model="query" @input.debounce.300ms="search"
-                   placeholder="Type your full name..."
-                   class="w-full p-3 border rounded-xl focus:ring focus:ring-blue-200 outline-none">
-            
-            <!-- Autocomplete -->
-            <ul x-show="suggestions.length" class="absolute bg-white border rounded-xl w-full mt-1 text-left z-10">
-                <template x-for="(name, index) in suggestions" :key="index">
-                    <li @click="selectName(name)"
-                        class="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                        x-text="name"></li>
-                </template>
+            <input 
+                type="text" 
+                id="student-search" 
+                placeholder="Start typing your name..." 
+                class="w-full border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                autocomplete="off"
+            >
+            <ul id="autocomplete-list" class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 hidden shadow">
+                <!-- Suggestions appear here -->
             </ul>
         </div>
 
-        <!-- Result -->
-        <div x-show="student" class="mt-6 p-4 bg-white rounded-2xl shadow">
-            <h2 class="text-xl font-bold text-gray-800" x-text="student.name"></h2>
-            <p class="mt-2 text-lg"
-               :class="student.graduation_status === 'Graduating' ? 'text-green-600' : 'text-red-600'"
-               x-text="student.graduation_status === 'Graduating' ? '🎓 Congratulations! You are graduating.' : '❗ You are not graduating yet.'">
-            </p>
-
-            <!-- Reasons -->
-            <ul class="text-sm text-gray-700 mt-3 list-disc list-inside" x-show="student.reasons.length">
-                <template x-for="reason in student.reasons" :key="reason">
-                    <li x-text="reason"></li>
-                </template>
-            </ul>
+        <!-- Student Result -->
+        <div id="student-result" class="mt-6 hidden bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h2 class="text-lg font-semibold text-gray-700" id="student-name"></h2>
+            <p id="graduation-status" class="mt-2 text-gray-600"></p>
+            <p id="not-graduating-reason" class="mt-2 text-red-600 font-medium"></p>
         </div>
-
-        <!-- Error / No result -->
-        <p class="text-red-500 mt-4" x-show="error" x-text="error"></p>
-
-        <!-- Footer -->
-        <p class="text-gray-500 text-sm mt-8">
-            This information is for guidance only. For official records, contact the registrar’s office.
-        </p>
     </div>
 
     <script>
-        function studentSearch() {
-            return {
-                query: '',
-                suggestions: [],
-                student: null,
-                error: '',
-                async search() {
-                    this.student = null;
-                    if (this.query.length < 2) {
-                        this.suggestions = [];
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`/autocomplete?query=${this.query}`);
-                        this.suggestions = await res.json();
-                    } catch {
-                        this.suggestions = [];
-                    }
-                },
-                async selectName(name) {
-                    this.query = name;
-                    this.suggestions = [];
-                    try {
-                        const res = await fetch(`/student/${encodeURIComponent(name)}`);
-                        if (!res.ok) throw new Error('Not found');
-                        this.student = await res.json();
-                        this.error = '';
-                    } catch {
-                        this.error = 'Student not found.';
-                        this.student = null;
-                    }
-                }
-            }
-        }
-    </script>
+        $(document).ready(function () {
+            const searchInput = $('#student-search');
+            const autocompleteList = $('#autocomplete-list');
+            const resultBox = $('#student-result');
+            const nameEl = $('#student-name');
+            const statusEl = $('#graduation-status');
+            const reasonEl = $('#not-graduating-reason');
 
+            let timeout = null;
+
+            searchInput.on('input', function () {
+                const query = $(this).val().trim();
+
+                clearTimeout(timeout);
+
+                if (query.length < 2) {
+                    autocompleteList.empty().hide();
+                    return;
+                }
+
+                timeout = setTimeout(() => {
+                    axios.get(`/search-students?term=${encodeURIComponent(query)}`)
+                        .then(res => {
+                            const results = res.data;
+                            autocompleteList.empty();
+
+                            if (results.length > 0) {
+                                results.forEach(student => {
+                                    autocompleteList.append(`
+                                        <li class="px-3 py-2 hover:bg-blue-50 cursor-pointer" data-id="${student.id}">
+                                            ${student.name}
+                                        </li>
+                                    `);
+                                });
+                                autocompleteList.show();
+                            } else {
+                                autocompleteList.append('<li class="px-3 py-2 text-gray-400">No matching names found</li>');
+                                autocompleteList.show();
+                            }
+                        });
+                }, 300);
+            });
+
+            autocompleteList.on('click', 'li', function () {
+                const studentId = $(this).data('id');
+                const studentName = $(this).text();
+
+                searchInput.val(studentName);
+                autocompleteList.empty().hide();
+
+                axios.get(`/student/${studentId}`)
+                    .then(res => {
+                        const data = res.data;
+
+                        nameEl.text(data.name);
+                        statusEl.text(`Graduation Status: ${data.graduating}`);
+
+                        if (data.graduating === 'Not Graduating') {
+                            reasonEl.text(data.message);
+                        } else {
+                            reasonEl.text('');
+                        }
+
+                        resultBox.removeClass('hidden');
+                    });
+            });
+        });
+    </script>
 </body>
 </html>
