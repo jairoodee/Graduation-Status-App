@@ -54,6 +54,7 @@
         {{-- Selected Student Result --}}
         <div 
             x-show="selectedStudent" 
+            x-transition.opacity.duration.500ms
             class="mt-8 bg-white shadow-lg p-6 rounded-2xl w-full border border-gray-200"
         >
             <h2 class="text-2xl font-semibold text-gray-800 mb-3" x-text="selectedStudent.name"></h2>
@@ -85,15 +86,28 @@
                     this.query = student.name;
 
                     if (student.graduation_status === "Graduating") {
-                        this.statusMessage = "🎓 Congratulations! You are cleared for graduation.";
+                        this.statusMessage = "🎓 Congratulations! You've met all requirements and are cleared for graduation. Well done!";
                     } else {
-                        let reasons = [];
-                        if (student.exam_status === "No") reasons.push("did not complete all exam requirements");
-                        if (student.attendance_status === "No") reasons.push("has not met the required attendance threshold");
-                        if (student.fees_status === "No") reasons.push("has pending fee payments");
+                        let messages = [];
 
-                        this.statusMessage = `Unfortunately, you are not yet cleared for graduation because ${reasons.join(", ")}. Please contact the administration for guidance.`;
+                        if (student.exam_status === "No") {
+                            messages.push("We noticed that some of your exam requirements are still pending review or completion.");
+                        }
+
+                        if (student.attendance_status === "No") {
+                            messages.push("Our records show that your attendance requirements haven't been fully met yet.");
+                        }
+
+                        if (student.fees_status === "No") {
+                            messages.push("There are some outstanding fees that need to be settled before final clearance.");
+                        }
+
+                        let intro = "Unfortunately, you're not yet cleared for graduation.";
+                        let outro = "Kindly contact the registrar's office for assistance and next steps.";
+
+                        this.statusMessage = `${intro} ${messages.join(" ")} ${outro}`;
                     }
+
                 }
             }
         }
