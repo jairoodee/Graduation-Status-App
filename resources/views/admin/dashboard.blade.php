@@ -10,13 +10,13 @@
     </p>
 
     <div class="grid gap-4 md:grid-cols-2">
-        <a href="#" class="bg-blue-600 text-white px-6 py-4 rounded-lg text-center hover:bg-blue-700 transition">
-            Upload Student CSV
-        </a>
+    <a href="{{ route('admin.upload') }}" class="bg-blue-600 text-white px-6 py-4 rounded-lg text-center hover:bg-blue-700 transition">
+        Upload Student CSV
+    </a>
 
-        <a href="#" class="bg-green-600 text-white px-6 py-4 rounded-lg text-center hover:bg-green-700 transition">
-            View Student Directory
-        </a>
+    <a href="#" class="bg-green-600 text-white px-6 py-4 rounded-lg text-center hover:bg-green-700 transition">
+        View Student Directory
+    </a>
     </div>
 </div>
 @endsection

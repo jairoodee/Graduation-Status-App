@@ -19,4 +19,6 @@ Route::post('/admin/logout', [AuthController::class, 'logout'])->name('admin.log
 // Protected admin routes
 Route::middleware('auth:admin')->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/upload', [StudentController::class, 'uploadForm'])->name('admin.upload');
+    Route::post('/admin/upload', [StudentController::class, 'uploadCSV'])->name('admin.upload.post');
 });
