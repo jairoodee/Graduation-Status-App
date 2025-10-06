@@ -24,10 +24,22 @@
                 class="w-full border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 autocomplete="off"
             >
+
+            <!-- Loading Spinner -->
+            <div id="loading-spinner" class="absolute right-3 top-2.5 hidden">
+                <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+            </div>
+
             <ul id="autocomplete-list" class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg mt-1 hidden shadow">
                 <!-- Suggestions appear here -->
             </ul>
         </div>
+
+        <!-- Error message -->
+        <div id="error-message" class="mt-4 hidden text-center text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"></div>
 
         <!-- Student Result -->
         <div id="student-result" class="mt-6 hidden bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -45,22 +57,28 @@
             const nameEl = $('#student-name');
             const statusEl = $('#graduation-status');
             const reasonEl = $('#not-graduating-reason');
+            const errorBox = $('#error-message');
+            const spinner = $('#loading-spinner');
 
             let timeout = null;
 
+            // --- Handle Search Typing ---
             searchInput.on('input', function () {
                 const query = $(this).val().trim();
+                autocompleteList.empty().hide();
+                errorBox.hide();
+                resultBox.hide();
 
                 clearTimeout(timeout);
 
-                if (query.length < 2) {
-                    autocompleteList.empty().hide();
-                    return;
-                }
+                if (query.length < 2) return;
+
+                spinner.show();
 
                 timeout = setTimeout(() => {
                     axios.get(`/search-students?term=${encodeURIComponent(query)}`)
                         .then(res => {
+                            spinner.hide();
                             const results = res.data;
                             autocompleteList.empty();
 
@@ -72,24 +90,36 @@
                                         </li>
                                     `);
                                 });
-                                autocompleteList.show();
                             } else {
-                                autocompleteList.append('<li class="px-3 py-2 text-gray-400">No matching names found</li>');
-                                autocompleteList.show();
+                                autocompleteList.append(`
+                                    <li class="px-3 py-2 text-gray-500 italic">
+                                        No matching students found.
+                                    </li>
+                                `);
                             }
+                            autocompleteList.show();
+                        })
+                        .catch(() => {
+                            spinner.hide();
+                            errorBox.text("An error occurred while searching. Please try again later.").show();
                         });
                 }, 300);
             });
 
+            // --- Handle Selection ---
             autocompleteList.on('click', 'li', function () {
                 const studentId = $(this).data('id');
                 const studentName = $(this).text();
 
+                if (!studentId) return; // ignore "no match" message
+
                 searchInput.val(studentName);
                 autocompleteList.empty().hide();
+                spinner.show();
 
                 axios.get(`/student/${studentId}`)
                     .then(res => {
+                        spinner.hide();
                         const data = res.data;
 
                         nameEl.text(data.name);
@@ -101,8 +131,19 @@
                             reasonEl.text('');
                         }
 
-                        resultBox.removeClass('hidden');
+                        resultBox.removeClass('hidden').show();
+                    })
+                    .catch(() => {
+                        spinner.hide();
+                        errorBox.text("Failed to fetch student details. Please try again.").show();
                     });
+            });
+
+            // Hide list when clicking outside
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#student-search, #autocomplete-list').length) {
+                    autocompleteList.hide();
+                }
             });
         });
     </script>

@@ -10,7 +10,7 @@ class StudentSearchController extends Controller
     // Show search page
     public function index()
     {
-        return view('student.search');
+        return view('students.search');
     }
 
     // Handle autocomplete suggestions
