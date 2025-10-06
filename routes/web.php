@@ -26,6 +26,7 @@ use App\Http\Controllers\StudentSearchController;
 
 // Homepage or search page for students (no login required)
 Route::get('/', [StudentSearchController::class, 'index'])->name('search.index');
+Route::get('/search', [StudentSearchController::class, 'search'])->name('search.student');
 Route::get('/search-students', [StudentSearchController::class, 'search'])->name('search.autocomplete');
 Route::get('/student/{id}', [StudentSearchController::class, 'show'])->name('search.show');
 
