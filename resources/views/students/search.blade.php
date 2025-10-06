@@ -1,46 +1,102 @@
-{{-- resources/views/search.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graduation Status Checker</title>
-    @vite('resources/css/app.css')
+    <title>Student Graduation Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
-<body class="bg-gray-50 flex flex-col justify-center items-center min-h-screen">
-    
-    {{-- School Logo --}}
+<body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen">
+
+    {{-- Logo --}}
     <div class="mb-8">
-        @if(file_exists(public_path('images/school-logo.png')))
-            <img src="{{ asset('images/school-logo.png') }}" alt="School Logo" class="h-24 mx-auto">
-        @else
-            <h1 class="text-3xl font-semibold text-gray-700">Graduation Status Portal</h1>
-        @endif
+        <img src="{{ asset('images/kfc_logo.jpg') }}" alt="School Logo" class="h-16">
     </div>
 
-    {{-- Search Form --}}
-    <form action="{{ route('search.student') }}" method="GET" class="w-full max-w-xl">
-        <div class="flex items-center bg-white rounded-full shadow-lg p-2">
+    {{-- Search Section --}}
+    <div 
+        x-data="studentSearch()" 
+        class="w-full max-w-2xl text-center"
+    >
+        <h1 class="text-3xl font-semibold mb-6 text-gray-700">Check Your Graduation Status</h1>
+
+        <div class="relative w-full">
             <input 
                 type="text" 
-                name="query" 
-                placeholder="Enter student name..." 
-                value="{{ request('query') }}"
-                class="flex-grow px-6 py-3 rounded-l-full text-lg focus:outline-none"
-                required
+                x-model="query" 
+                @input.debounce.300ms="searchStudents" 
+                placeholder="Type your name..." 
+                class="w-full p-4 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-lg"
             >
             <button 
-                type="submit"
-                class="bg-blue-600 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-700 transition-all"
+                @click="searchStudents" 
+                class="absolute right-2 top-2 bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700"
             >
                 Search
             </button>
-        </div>
-    </form>
 
-    {{-- Footer --}}
-    <div class="mt-12 text-gray-500 text-sm">
-        <p>&copy; {{ date('Y') }} Your School Name. All rights reserved.</p>
+            {{-- Autocomplete Results --}}
+            <ul 
+                x-show="results.length > 0" 
+                class="absolute z-10 bg-white border border-gray-200 mt-2 w-full rounded-xl shadow-lg max-h-60 overflow-y-auto text-left"
+            >
+                <template x-for="student in results" :key="student.id">
+                    <li 
+                        @click="selectStudent(student)" 
+                        class="px-4 py-3 hover:bg-blue-50 cursor-pointer"
+                        x-text="student.name"
+                    ></li>
+                </template>
+            </ul>
+        </div>
+
+        {{-- Selected Student Result --}}
+        <div 
+            x-show="selectedStudent" 
+            class="mt-8 bg-white shadow-lg p-6 rounded-2xl w-full border border-gray-200"
+        >
+            <h2 class="text-2xl font-semibold text-gray-800 mb-3" x-text="selectedStudent.name"></h2>
+            <p class="text-lg" x-text="statusMessage"></p>
+        </div>
     </div>
+
+    {{-- AlpineJS Logic --}}
+    <script>
+        function studentSearch() {
+            return {
+                query: '',
+                results: [],
+                selectedStudent: null,
+                statusMessage: '',
+
+                async searchStudents() {
+                    if (this.query.length < 2) {
+                        this.results = [];
+                        return;
+                    }
+                    const response = await fetch(`/api/students/search?query=${this.query}`);
+                    this.results = await response.json();
+                },
+
+                async selectStudent(student) {
+                    this.selectedStudent = student;
+                    this.results = [];
+                    this.query = student.name;
+
+                    if (student.graduation_status === "Graduating") {
+                        this.statusMessage = "🎓 Congratulations! You are cleared for graduation.";
+                    } else {
+                        let reasons = [];
+                        if (student.exam_status === "No") reasons.push("did not complete all exam requirements");
+                        if (student.attendance_status === "No") reasons.push("has not met the required attendance threshold");
+                        if (student.fees_status === "No") reasons.push("has pending fee payments");
+
+                        this.statusMessage = `Unfortunately, you are not yet cleared for graduation because ${reasons.join(", ")}. Please contact the administration for guidance.`;
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>

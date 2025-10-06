@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController; // ✅ aliased to avoid conflict
 use App\Http\Controllers\StudentController; // public-facing student search
 use App\Http\Controllers\StudentSearchController;
+use App\Http\Controllers\Api\StudentApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,14 @@ use App\Http\Controllers\StudentSearchController;
 | contains the "web" middleware group.
 |
 */
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/api/students/search', [StudentApiController::class, 'search']);
 
 /*
 |--------------------------------------------------------------------------
