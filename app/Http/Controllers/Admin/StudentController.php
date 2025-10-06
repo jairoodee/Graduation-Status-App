@@ -10,7 +10,9 @@ class StudentController extends Controller
 {
     public function index()
     {
-        $students = Student::all();
+        $students = Student::count() > 20
+            ? Student::orderBy('name')->paginate(10)
+            : Student::orderBy('name')->get();
         return view('admin.students.index', compact('students'));
     }
 

@@ -60,7 +60,11 @@
         </div>
 
         <div class="d-flex justify-content-center mt-4">
-            {{ $students->links('pagination::bootstrap-5') }}
+            @if(method_exists($students, 'links'))
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $students->links('pagination::bootstrap-5') }}
+                </div>
+            @endif
         </div>
     @endif
 </div>
