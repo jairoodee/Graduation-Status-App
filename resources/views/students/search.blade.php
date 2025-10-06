@@ -55,10 +55,13 @@
         <div 
             x-show="selectedStudent" 
             x-transition.opacity.duration.500ms
-            class="mt-8 bg-white shadow-lg p-6 rounded-2xl w-full border border-gray-200"
+            :class="selectedStudent.graduation_status === 'Graduating' 
+                ? 'mt-8 bg-white shadow-lg p-6 rounded-2xl w-full border-l-4 border-green-400' 
+                : 'mt-8 bg-white shadow-lg p-6 rounded-2xl w-full border-l-4 border-red-400'"
         >
+
             <h2 class="text-2xl font-semibold text-gray-800 mb-3" x-text="selectedStudent.name"></h2>
-            <p class="text-lg" x-text="statusMessage"></p>
+            <div class="text-lg leading-relaxed" x-html="statusMessage"></div>
         </div>
     </div>
 
@@ -85,28 +88,44 @@
                     this.results = [];
                     this.query = student.name;
 
-                    if (student.graduation_status === "Graduating") {
-                        this.statusMessage = "🎓 Congratulations! You've met all requirements and are cleared for graduation. Well done!";
-                    } else {
-                        let messages = [];
+                if (student.graduation_status === "Graduating") {
+                    this.statusMessage = `
+                        <div class='text-green-700 font-medium'>
+                            🎓 Congratulations! You've met all the requirements and are cleared for graduation.
+                        </div>
+                    `;
+                } else {
+                    let reasons = [];
 
-                        if (student.exam_status === "No") {
-                            messages.push("We noticed that some of your exam requirements are still pending review or completion.");
-                        }
-
-                        if (student.attendance_status === "No") {
-                            messages.push("Our records show that your attendance requirements haven't been fully met yet.");
-                        }
-
-                        if (student.fees_status === "No") {
-                            messages.push("There are some outstanding fees that need to be settled before final clearance.");
-                        }
-
-                        let intro = "Unfortunately, you're not yet cleared for graduation.";
-                        let outro = "Kindly contact the registrar's office for assistance and next steps.";
-
-                        this.statusMessage = `${intro} ${messages.join(" ")} ${outro}`;
+                    if (student.exam_status === "No") {
+                        reasons.push("Exam requirements are still pending review or completion.");
                     }
+
+                    if (student.attendance_status === "No") {
+                        reasons.push("Attendance requirements haven't been fully met.");
+                    }
+
+                    if (student.fees_status === "No") {
+                        reasons.push("There are outstanding fee payments that need to be cleared.");
+                    }
+
+                    let reasonList = reasons
+                        .map(r => `<li class='ml-4 pl-3.5 list-disc text-left text-gray-700'>${r}</li>`)
+                        .join("");
+
+                    this.statusMessage = `
+                        <div class='text-red-700 font-semibold mb-2'>
+                            Unfortunately, you're not yet cleared for graduation.
+                        </div>
+                        <ul class='mb-3'>
+                            ${reasonList}
+                        </ul>
+                        <div class='text-gray-700'>
+                            Kindly contact the registrar's office for assistance and next steps.
+                        </div>
+                    `;
+                }
+
 
                 }
             }
