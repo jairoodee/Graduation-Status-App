@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Student;
+use Illuminate\Support\Facades\Storage;
+use League\Csv\Reader;
+use League\Csv\Exception;
 
 class StudentController extends Controller
 {
@@ -15,6 +18,62 @@ class StudentController extends Controller
             : Student::orderBy('name')->get();
         return view('admin.students.index', compact('students'));
     }
+
+    public function import(Request $request)
+{
+    $request->validate([
+        'csv_file' => 'required|file|mimes:csv,txt|max:2048',
+    ]);
+
+    try {
+        $path = $request->file('csv_file')->getRealPath();
+
+        // Handle UTF-8 BOM and Windows line endings gracefully
+        $file = fopen($path, 'r');
+        if (!$file) {
+            throw new \Exception("Cannot open the file.");
+        }
+
+        $header = fgetcsv($file);
+        if (!$header) {
+            throw new \Exception("CSV file appears to be empty or invalid.");
+        }
+
+        // Clean header names (remove BOM, trim spaces)
+        $header = array_map(fn($h) => trim(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $h)), $header);
+
+        $expectedHeaders = ['Name', 'Attendance Status', 'Exam Status', 'Fees Status', 'Graduation Status'];
+        if ($header !== $expectedHeaders) {
+            throw new \Exception("CSV headers do not match expected format. Found: " . implode(',', $header));
+        }
+
+        $rows = [];
+        while (($data = fgetcsv($file)) !== false) {
+            if (count($data) < 5) continue; // skip incomplete rows
+
+            $rows[] = array_combine($header, $data);
+        }
+        fclose($file);
+
+        foreach ($rows as $row) {
+            $student = Student::updateOrCreate(
+                ['name' => $row['Name']],
+                [
+                    'attendance' => $row['Attendance Status'],
+                    'exam' => $row['Exam Status'],
+                    'fees' => $row['Fees Status'],
+                    'graduating' => strtolower(trim($row['Graduation Status'])) === 'graduating' ? 'Graduating' : 'Not Graduating',
+                ]
+            );
+            
+        }
+
+        return redirect()->back()->with('success', 'Students imported successfully!');
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Error reading the CSV file: ' . $e->getMessage());
+    }
+}
+
 
     public function showUploadForm()
     {

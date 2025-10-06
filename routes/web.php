@@ -54,6 +54,7 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     // Student Management
     Route::get('/students/upload', [AdminStudentController::class, 'showUploadForm'])->name('students.upload');
     Route::post('/students/upload', [AdminStudentController::class, 'uploadCSV'])->name('students.upload.post');
+    Route::post('/students/import', [AdminStudentController::class, 'import'])->name('students.import');
     Route::get('/students', [AdminStudentController::class, 'index'])->name('students.index');
     Route::get('/students/{student}/edit', [AdminStudentController::class, 'edit'])->name('students.edit');
     Route::put('/students/{student}', [AdminStudentController::class, 'update'])->name('students.update');
