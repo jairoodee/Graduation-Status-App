@@ -110,7 +110,7 @@
                     }
 
                     let reasonList = reasons
-                        .map(r => `<li class='ml-4 pl-3.5 list-disc text-left text-gray-700'>${r}</li>`)
+                        .map(r => `<li class='ml-4 pl-3.5 list-disc text-center text-gray-700'>${r}</li>`)
                         .join("");
 
                     this.statusMessage = `
@@ -120,8 +120,8 @@
                         <ul class='mb-3'>
                             ${reasonList}
                         </ul>
-                        <div class='text-gray-700'>
-                            Kindly contact the School Administration for assistance via email at <a href="mailto:kfc@jgmail.org">kfc@jgmail.org</a>
+                        <div class='text-gray-700 text-sm'>
+                            For any further enquiries kindly contact the School Administration via email at <a class='text-blue-600 hover:underline' href="mailto:kfc@jgmail.org">kfc@jgmail.org</a>
                         </div>
                     `;
                 }
