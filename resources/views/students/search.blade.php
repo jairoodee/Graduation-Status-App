@@ -98,15 +98,15 @@
                     let reasons = [];
 
                     if (student.exam_status === "No") {
-                        reasons.push("Exam requirements are still pending review or completion.");
+                        reasons.push("Exam requirements were not fully met");
                     }
 
                     if (student.attendance_status === "No") {
-                        reasons.push("Attendance requirements haven't been fully met.");
+                        reasons.push("Attendance requirements were not fully met.");
                     }
 
                     if (student.fees_status === "No") {
-                        reasons.push("There are outstanding fee payments that need to be cleared.");
+                        reasons.push("There are outstanding fee payments that were not cleared.");
                     }
 
                     let reasonList = reasons
@@ -121,7 +121,7 @@
                             ${reasonList}
                         </ul>
                         <div class='text-gray-700'>
-                            Kindly contact the registrar's office for assistance and next steps.
+                            Kindly contact the School Administration for assistance via email at <a href="mailto:kfc@jgmail.org">kfc@jgmail.org</a>
                         </div>
                     `;
                 }
