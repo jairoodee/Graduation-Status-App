@@ -18,7 +18,7 @@
     @endif
 
     <div class="card border-0 shadow-sm rounded-3 p-4">
-        <form action="{{ route('students.import') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('students.upload.post') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <div class="mb-3">

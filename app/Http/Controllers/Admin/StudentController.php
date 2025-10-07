@@ -19,100 +19,108 @@ class StudentController extends Controller
         return view('admin.students.index', compact('students'));
     }
 
-    public function import(Request $request)
-{
-    $request->validate([
-        'csv_file' => 'required|file|mimes:csv,txt|max:2048',
-    ]);
-
-    try {
-        $path = $request->file('csv_file')->getRealPath();
-
-        // Handle UTF-8 BOM and Windows line endings gracefully
-        $file = fopen($path, 'r');
-        if (!$file) {
-            throw new \Exception("Cannot open the file.");
-        }
-
-        $header = fgetcsv($file);
-        if (!$header) {
-            throw new \Exception("CSV file appears to be empty or invalid.");
-        }
-
-        // Clean header names (remove BOM, trim spaces)
-        $header = array_map(fn($h) => trim(preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $h)), $header);
-
-        $expectedHeaders = ['Name', 'Attendance Status', 'Exam Status', 'Fees Status', 'Graduation Status'];
-        if ($header !== $expectedHeaders) {
-            throw new \Exception("CSV headers do not match expected format. Found: " . implode(',', $header));
-        }
-
-        $rows = [];
-        while (($data = fgetcsv($file)) !== false) {
-            if (count($data) < 5) continue; // skip incomplete rows
-
-            $rows[] = array_combine($header, $data);
-        }
-        fclose($file);
-
-        foreach ($rows as $row) {
-            $student = Student::updateOrCreate(
-                ['name' => $row['Name']],
-                [
-                    'attendance' => $row['Attendance Status'],
-                    'exam' => $row['Exam Status'],
-                    'fees' => $row['Fees Status'],
-                    'graduating' => strtolower(trim($row['Graduation Status'])) === 'graduating' ? 'Graduating' : 'Not Graduating',
-                ]
-            );
-            
-        }
-
-        return redirect()->back()->with('success', 'Students imported successfully!');
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Error reading the CSV file: ' . $e->getMessage());
-    }
-}
-
-
+    
     public function showUploadForm()
     {
         return view('admin.students.upload');
     }
 
     public function uploadCSV(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:csv,txt|max:2048'
+{
+    // Validate file
+    $request->validate([
+        'csv_file' => 'required|mimes:csv,txt|max:2048'
+    ]);
+
+    // Get the uploaded file (matches the input name 'csv_file')
+    $file = $request->file('csv_file');
+    $added = 0;
+    $updated = 0;
+
+    if (($handle = fopen($file, 'r')) === false) {
+        return redirect()->back()->with('error', 'Unable to open CSV file.');
+    }
+
+    // Read header row
+    $header = fgetcsv($handle);
+    if (!$header) {
+        return redirect()->back()->with('error', 'CSV file is empty or invalid.');
+    }
+
+    // Remove BOM and clean header
+    $header = array_map(function($h) {
+        $h = preg_replace('/\x{FEFF}/u', '', $h); // remove BOM
+        return trim($h);
+    }, $header);
+
+    // Expected headers
+    $expected = ['Name','Attendance Status','Exam Status','Fees Status','Graduation Status'];
+    if (array_map('strtolower', $header) !== array_map('strtolower', $expected)) {
+        return redirect()->back()->with('error', 'CSV headers do not match expected format.');
+    }
+
+    // Helper function to clean each field
+    $clean = function($val) {
+        $val = mb_convert_encoding($val, 'UTF-8', 'UTF-8'); // UTF-8
+        $val = trim($val); // remove spaces
+        $val = preg_replace('/[\x00-\x1F\x7F\xA0]/u', '', $val); // remove hidden chars
+        return $val;
+    };
+
+    // Process each row
+    while (($row = fgetcsv($handle)) !== false) {
+        if (count($row) !== count($header)) continue;
+
+        $data = array_combine($header, $row);
+
+        // Clean each field
+        $name = $clean($data['Name']);
+        $attendanceRaw = $clean($data['Attendance Status']);
+        $examRaw = $clean($data['Exam Status']);
+        $feesRaw = $clean($data['Fees Status']);
+        $graduationRaw = $clean($data['Graduation Status']);
+
+        // Normalize values
+        $attendance = in_array(strtolower($attendanceRaw), ['yes','y','true','1']) ? 'Yes' : 'No';
+        $exam = in_array(strtolower($examRaw), ['yes','y','true','1']) ? 'Yes' : 'No';
+        $fees = in_array(strtolower($feesRaw), ['yes','y','true','1']) ? 'Yes' : 'No';
+        $graduation = in_array(strtolower($graduationRaw), ['graduating','yes','y','true','1']) ? 'Graduating' : 'Not Graduating';
+
+        // Log each row for debugging
+        \Log::info("Processing student CSV row", [
+            'name' => $name,
+            'attendance_raw' => $attendanceRaw,
+            'attendance' => $attendance,
+            'exam_raw' => $examRaw,
+            'exam' => $exam,
+            'fees_raw' => $feesRaw,
+            'fees' => $fees,
+            'graduation_raw' => $graduationRaw,
+            'graduation' => $graduation,
         ]);
 
-        $file = $request->file('file');
-        $rows = array_map('str_getcsv', file($file));
-        $header = array_map('trim', array_shift($rows));
+        // Save or update student
+        $student = Student::updateOrCreate(
+            ['name' => $name],
+            [
+                'attendance_status' => $attendance,
+                'exam_status' => $exam,
+                'fees_status' => $fees,
+                'graduation_status' => $graduation
+            ]
+        );
 
-        $added = 0;
-        $updated = 0;
-
-        foreach ($rows as $row) {
-            $data = array_combine($header, $row);
-
-            $student = Student::updateOrCreate(
-                ['name' => trim($data['Name'])],
-                [
-                    'exam_status' => trim($data['Exam Status']),
-                    'attendance_status' => trim($data['Attendance Status']),
-                    'fees_status' => trim($data['Fees Status']),
-                    'graduation_status' => trim($data['Graduation Status'])
-                ]
-            );
-
-            $student->wasRecentlyCreated ? $added++ : $updated++;
-        }
-
-        return redirect()
-            ->back()
-            ->with('success', "Upload successful. {$added} new students added, {$updated} updated.");
+        $student->wasRecentlyCreated ? $added++ : $updated++;
     }
+
+    fclose($handle);
+
+    return redirect()->back()->with('success', "Upload successful: {$added} added, {$updated} updated.");
+}
+
+
+    
+    
 
     public function edit(Student $student)
     {
